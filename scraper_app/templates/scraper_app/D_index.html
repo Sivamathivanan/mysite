@@ -1,0 +1,207 @@
+{% load tz %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Blinkit Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- ✅ Single Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <span class="navbar-brand">🛒 Blinkit Stock Tracker</span>
+            <div>
+                <a href="{% url 'historical_data' %}" class="btn btn-light btn-sm me-2">Historical</a>
+                <a href="{% url 'compare_sessions' %}" class="btn btn-warning btn-sm me-2">Compare</a>
+                <a href="{% url 'run_scrape' %}" class="btn btn-success btn-sm">New Scrape</a>
+            </div>
+        </div>
+    </nav>
+    <div class="container mt-4">
+        <!-- Summary Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h5>Total Products</h5>
+                                <h3>{{ session.total_products }}</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-boxes fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-danger text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h5>Out of Stock</h5>
+                                <h3>{{ session.out_of_stock_count }}</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-exclamation-triangle fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h5>In Stock</h5>
+                                <h3>{{ session.total_products|add:"-session.out_of_stock_count" }}</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-check-circle fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h5>Availability</h5>
+                                <h3>{{ session.availability_rate }}%</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-chart-pie fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Session Info -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>📊 Session Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Keyword:</strong> <span class="badge bg-primary">{{ session.keyword }}</span></p>
+                        <p><strong>Pincode:</strong> <span class="badge bg-secondary">{{ session.pincode }}</span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <!-- <p><strong>Scraped On:</strong> {{ session.timestamp|date:"F d, Y H:i" }}</p> -->
+                        <p><strong>Scraped On:</strong> {{ session.timestamp|localtime|date:"F d, Y H:i" }}</p>
+                        <p><strong>Session ID:</strong> #{{ session.id }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Products Table -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>📦 Product Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>Product Name</th>
+                                <th>Available Variants</th>
+                                <th>Out-of-Stock Variants</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in products %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    <strong>{{ p.name }}</strong>
+                                    {% if p.out_of_stock_variants %}
+                                        <span class="badge bg-danger ms-2">Has Stock Issues</span>
+                                    {% else %}
+                                        <span class="badge bg-success ms-2">All Available</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ p.available_variants|default:"None" }}</td>
+                                <td>{{ p.out_of_stock_variants|default:"None" }}</td>
+                                <td>
+                                    <a href="{{ p.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-external-link-alt"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">No products found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Significant Stock Alerts -->
+        <div class="card mb-4 border-warning">
+            <div class="card-header bg-warning text-white">
+                <h5>🚨 Significant Stock Alerts</h5>
+            </div>
+            <div class="card-body">
+                {% if stock_alerts %}
+                    {% for a in stock_alerts %}
+                        <div class="alert alert-warning mb-2" role="alert">
+                            {{ a.message }}
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="alert alert-success" role="alert">
+                        🎉 No significant stock alerts for this session.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ✅ Action Buttons -->
+        <div class="text-center mb-4">
+            <div class="btn-group" role="group">
+                <a href="{% url 'run_scrape' %}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-plus"></i> Run New Scrape
+                </a>
+                <a href="{% url 'sessions_list' %}" class="btn btn-info btn-lg me-2">
+                    <i class="fas fa-search"></i> Advanced Search
+                </a>
+                <button class="btn btn-info btn-lg" onclick="window.print()">
+                    <i class="fas fa-print"></i> Print Report
+                </button>
+            </div>
+            <div class="btn-group ms-3" role="group">
+                <button type="button" class="btn btn-success btn-lg dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-download"></i> Export Data
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'export_session_excel' session.id %}">
+                        <i class="fas fa-file-excel"></i> Export to Excel
+                    </a></li>
+                    <li><a class="dropdown-item" href="{% url 'export_session_csv' session.id %}">
+                        <i class="fas fa-file-csv"></i> Export to CSV
+                    </a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

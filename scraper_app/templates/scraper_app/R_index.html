@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Scraping Results</title>
+</head>
+<body>
+    <h1>Scraping Results</h1>
+    <ul>
+    {% for item in results %}
+        <li>
+            <strong>{{ item.product_name }}</strong><br>
+            Available Variants: {{ item.available_variants|join:", " }}<br>
+            Out of Stock Variants: {{ item.out_of_stock_variants|join:", " }}<br>
+            URL: <a href="{{ item.url }}" target="_blank">{{ item.url }}</a><br><br>
+        </li>
+    {% empty %}
+        <li>No results found.</li>
+    {% endfor %}
+    </ul>
+    <a href="{% url 'run_scrape' %}">Run another scrape</a>
+</body>
+</html>

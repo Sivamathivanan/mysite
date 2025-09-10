@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compare Sessions - Blinkit Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <span class="navbar-brand">⚖️ Session Comparison</span>
+            <div>
+                <a href="{% url 'historical_data' %}" class="btn btn-light btn-sm me-2">Historical</a>
+                <a href="{% url 'run_scrape' %}" class="btn btn-warning btn-sm">New Scrape</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Summary Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card bg-info text-white">
+                    <div class="card-body text-center">
+                        <h3>{{ avg_availability }}%</h3>
+                        <p>Average Availability Rate</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center">
+                        <h3>{{ avg_products }}</h3>
+                        <p>Average Products per Session</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comparison Table -->
+        <div class="card">
+            <div class="card-header">
+                <h5>📊 Session Comparison (Last 5 Sessions)</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Session</th>
+                                <th>Keyword</th>
+                                <th>Date</th>
+                                <th>Products</th>
+                                <th>Out of Stock</th>
+                                <th>Availability</th>
+                                <th>Performance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for session in sessions %}
+                            <tr>
+                                <td><strong>#{{ session.id }}</strong></td>
+                                <td>{{ session.keyword }}</td>
+                                <td>{{ session.timestamp|date:"M d, Y" }}</td>
+                                <td>{{ session.total_products }}</td>
+                                <td>{{ session.out_of_stock_count }}</td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar 
+                                            {% if session.availability_rate >= 80 %}bg-success
+                                            {% elif session.availability_rate >= 50 %}bg-warning
+                                            {% else %}bg-danger{% endif %}" 
+                                            style="width: {{ session.availability_rate }}%">
+                                            {{ session.availability_rate }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if session.availability_rate >= avg_availability %}
+                                        <span class="badge bg-success">Above Average</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Below Average</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

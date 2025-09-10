@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blinkit Analytics Hub - Dashboard</title>
+    <link rel="icon" href="/static/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: #f4f6fa; font-family: 'Inter',sans-serif; }
+        .kpi-card { border: none; border-radius: 18px; box-shadow: 0 6px 30px -10px #0001; margin-bottom: 2rem; transition: box-shadow .2s;}
+        .kpi-card:hover { box-shadow: 0 12px 32px -6px #0002;}
+        .kpi-val { font-size: 2.6rem; font-weight: 700; }
+        .kpi-label { font-weight: 500; opacity: 0.7; }
+        .dashboard-title { font-weight:700; font-size:2.3rem; }
+        .cta-btn { padding:1.2rem 2.3rem; font-weight:600; }
+        .recent-table th, .recent-table td { vertical-align: middle; }
+        .session-row td, .session-row th { padding: 0.9rem 0.6rem; }
+        .metric-badge { padding: 0.50rem 1rem; border-radius: 25px; font-weight: 600; font-size: 0.92rem; letter-spacing: 0.01em;}
+        .section-title { font-weight:700; font-size:1.4rem; color: #353945;}
+        .alert-card { background: #fffbe6; border: 1px solid #ffe066; border-radius: 10px; margin:2rem 0; padding:1rem; }
+        .alert-msg { color: #92400e; font-weight:600; font-size:1.05rem; }
+        .footer { padding:30px 0 5px 0; color:#aaa; text-align:center; }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark" style="background: #171e2d;">
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
+            <i class="fas fa-chart-line me-2 text-warning"></i> Blinkit Analytics Hub
+        </a>
+        <div class="navbar-nav ms-auto d-flex flex-row">
+            <a href="{% url 'run_scrape' %}" class="btn btn-warning me-2">
+                <i class="fas fa-plus"></i> New Analysis
+            </a>
+            <a href="{% url 'sessions_list' %}" class="btn btn-outline-light">
+                <i class="fas fa-database"></i> Data Explorer
+            </a>
+        </div>
+    </div>
+</nav>
+
+<section class="py-5" style="background: linear-gradient(88deg,#796def 0%,#6ad7e5 100%); color: #fff;">
+    <div class="container py-4">
+        <div class="row align-items-center">
+            <div class="col-lg-7">
+                <h1 class="dashboard-title mb-3">
+                    Real-Time Stock Intelligence <br>
+                    <span class="fw-bold" style="color:#ffee58">for Blinkit Platform</span>
+                </h1>
+                <p class="fs-5 mb-4" style="max-width: 700px;">
+                    Advanced analytics, rich reporting and actionable alerts for product availability, restocking, and demand trends.
+                </p>
+                <a href="{% url 'run_scrape' %}" class="btn btn-warning btn-lg cta-btn me-3">
+                    <i class="fa fa-rocket me-1"></i> Start Analysis
+                </a>
+                <a href="{% url 'historical_data' %}" class="btn btn-light btn-lg cta-btn">
+                    <i class="fa fa-chart-bar me-1"></i> View Reports
+                </a>
+                <a href="{% url 'analytics_dashboard' %}" class="btn btn-success btn-lg cta-btn">
+                    <i class="fa fa-brain me-1"></i> ML Analytics
+                </a>                
+            </div>
+            <div class="col-lg-5 text-center">
+                <img src="/static/dashboard_illustration.svg" style="max-width:85%;" alt="Dashboard Illustration" />
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="container my-5">
+    <div class="row g-4 mb-5">
+        <div class="col-md-3">
+            <div class="card kpi-card" style="background: linear-gradient(45deg,#4f8cff,#86e0ff); color:#fff;">
+                <div class="card-body text-center">
+                    <div class="kpi-val">{{ total_sessions|default:"0" }}</div>
+                    <div class="kpi-label">Analysis Sessions</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card" style="background: linear-gradient(45deg,#42e695,#3bb2b8); color:#fff;">
+                <div class="card-body text-center">
+                    <div class="kpi-val">{{ total_products_scanned|default:"0" }}</div>
+                    <div class="kpi-label">Products Analyzed</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card" style="background: linear-gradient(45deg,#ffd452,#ffb347); color:#6b4b00;">
+                <div class="card-body text-center">
+                    <div class="kpi-val">{{ active_alerts|default:"0" }}</div>
+                    <div class="kpi-label">Active Alerts</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card" style="background: linear-gradient(45deg,#f9557a,#ff7eb3); color:#fff;">
+                <div class="card-body text-center">
+                    <div class="kpi-val">{% if latest_session %}{{ latest_session.availability_rate }}%{% else %}N/A{% endif %}</div>
+                    <div class="kpi-label">Current Availability</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if significant_alerts %}
+    <div class="alert-card d-flex align-items-start">
+        <i class="fas fa-bell fa-2x me-3 text-warning"></i>
+        <div>
+            <div class="fw-bold mb-2">🔥 Significant Stock Alerts</div>
+            {% for alert in significant_alerts %}
+                <div class="alert-msg mb-1">
+                    <i class="fas fa-exclamation-circle me-1"></i>{{ alert.message }}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="mt-5 pb-4">
+        <div class="d-flex justify-content-between align-items-end mb-3">
+            <div>
+                <div class="section-title mb-0">Recent Analysis Sessions</div>
+                <div style="color:#94a3b8; font-size:.97rem;">Last {{ recent_sessions|length }} sessions</div>
+            </div>
+            <a href="{% url 'sessions_list' %}" class="btn btn-outline-primary">
+                <i class="fas fa-external-link-alt"></i> All Sessions
+            </a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover recent-table mb-0">
+                <thead>
+                    <tr>
+                        <th>Session</th>
+                        <th>Query</th>
+                        <th>Pincode</th>
+                        <th>Products</th>
+                        <th>OOS</th>
+                        <th>Availability</th>
+                        <th>Timestamp</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for session in recent_sessions %}
+                    <tr class="session-row">
+                        <td>#{{ session.id }}</td>
+                        <td><span class="badge bg-primary">{{ session.keyword }}</span></td>
+                        <td><span class="badge bg-secondary">{{ session.pincode }}</span></td>
+                        <td>{{ session.total_products }}</td>
+                        <td>
+                            {% if session.out_of_stock_count %}
+                                <span class="text-danger fw-bold">{{ session.out_of_stock_count }}</span>
+                            {% else %}
+                                <span class="text-success fw-bold">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if session.availability_rate >= 90 %}
+                                <span class="badge bg-success">{{ session.availability_rate }}%</span>
+                            {% elif session.availability_rate >= 70 %}
+                                <span class="badge bg-warning text-dark">{{ session.availability_rate }}%</span>
+                            {% else %}
+                                <span class="badge bg-danger">{{ session.availability_rate }}%</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ session.timestamp|date:"M d, H:i" }}</td>
+                        <td>
+                            <a href="{% url 'dashboard' session.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="footer">
+    &copy; 2025 Blinkit Analytics Hub &middot; <a href="mailto:sivamathivananp@gmail.com">Support</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,44 @@
+{% load crispy_forms_tags %}
+<!DOCTYPE html><html><head>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <title>Products for Session {{ session.id }}</title>
+</head><body>
+  <div class="container mt-4">
+    <h1>Products — Session #{{ session.id }}</h1>
+    <form method="get">
+      {{ filter.form|crispy }}
+      <button type="submit" class="btn btn-primary">Filter</button>
+      <a href="{% url 'products_list' session.id %}" class="btn btn-secondary">Reset</a>
+    </form>
+    <table class="table table-striped mt-3">
+      <thead><tr>
+        <th>#</th><th>Name</th><th>Available</th><th>Out of Stock</th><th>Action</th>
+      </tr></thead>
+      <tbody>
+        {% for p in products %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>{{ p.name }}</td>
+          <td>{{ p.available_variants }}</td>
+          <td>{{ p.out_of_stock_variants }}</td>
+          <td>
+            <a href="{{ p.url }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <nav>
+      <ul class="pagination">
+        {% if products.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ products.previous_page_number }}">&laquo;</a></li>
+        {% endif %}
+        <li class="page-item active"><span class="page-link">{{ products.number }}</span></li>
+        {% if products.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ products.next_page_number }}">&raquo;</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+    <a href="{% url 'sessions_list' %}" class="btn btn-secondary mt-3">Back to Sessions</a>
+  </div>
+</body></html>

@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Analytics - Blinkit Intelligence</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        .analytics-card { border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .metric-trend { font-size: 2rem; }
+        .loading-spinner { display: none; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'home' %}">
+                <i class="fas fa-brain me-2"></i>Advanced Analytics
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a href="{% url 'home' %}" class="btn btn-outline-light">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Metrics Overview -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card analytics-card bg-gradient-primary text-white">
+                    <div class="card-body text-center">
+                        <div class="metric-trend">
+                          {% if metrics.trend.icon %}
+                            {{ metrics.trend.icon }}
+                          {% else %}
+                            <i class="fas fa-chart-line"></i>
+                          {% endif %}
+                        </div>
+                        <h5>Availability Trend</h5>
+                        <p>{{ metrics.trend.direction }} ({{ metrics.trend.slope }}%)</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card analytics-card bg-gradient-{{ metrics.risk_assessment.color }} text-white">
+                    <div class="card-body text-center">
+                        <div class="metric-trend">🎯</div>
+                        <h5>Risk Level</h5>
+                        <p>{{ metrics.risk_assessment.level }} ({{ metrics.risk_assessment.active_alerts }} alerts)</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card analytics-card bg-gradient-info text-white">
+                    <div class="card-body text-center">
+                        <div class="metric-trend">📊</div>
+                        <h5>Data Quality</h5>
+                        <p>{{ metrics.data_quality.total_data_points }} points over {{ metrics.data_quality.days_analyzed }} days</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Forecasting Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card analytics-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-crystal-ball me-2"></i>Stock-Out Probability Forecast</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <input type="text" class="form-control" id="forecast-keyword" placeholder="Keyword (optional)">
+                            </div>
+                            <div class="col-md-3">
+                                <input type="text" class="form-control" id="forecast-pincode" placeholder="Pincode (optional)">
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="forecast-days">
+                                    <option value="7">7 days</option>
+                                    <option value="14">14 days</option>
+                                    <option value="30">30 days</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-primary w-100" onclick="generateForecast()">
+                                    <i class="fas fa-chart-line me-1"></i>Generate Forecast
+                                </button>
+                            </div>
+                        </div>
+                        <div id="forecast-loading" class="loading-spinner text-center">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p>Generating forecast...</p>
+                        </div>
+                        <div id="forecast-chart" style="height: 400px;"></div>
+                        <div id="forecast-insights" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Products at Risk Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card analytics-card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5><i class="fas fa-exclamation-triangle me-2"></i>Products at Risk of Going Out of Stock</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="products-loading" class="loading-spinner text-center">
+                            <div class="spinner-border text-warning" role="status"></div>
+                            <p>Analyzing product risks...</p>
+                        </div>
+                        <div id="products-at-risk-content"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Correlation Analysis -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card analytics-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-project-diagram me-2"></i>Correlation Heatmap</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="correlation-chart" style="height: 350px;"></div>
+                        <button class="btn btn-outline-primary btn-sm mt-2" onclick="loadCorrelationAnalysis()">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh Analysis
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card analytics-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-map-marked-alt me-2"></i>Pincode Clustering</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="clustering-results"></div>
+                        <button class="btn btn-outline-primary btn-sm mt-2" onclick="loadClusteringAnalysis()">
+                            <i class="fas fa-sync-alt me-1"></i>Analyze Regions
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Time Pattern Analysis -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card analytics-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-clock me-2"></i>Time Pattern Analysis</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div id="hourly-pattern-chart" style="height: 300px;"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div id="daily-pattern-chart" style="height: 300px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1) Forecasting
+        async function generateForecast() {
+            const keyword = document.getElementById('forecast-keyword').value;
+            const pincode = document.getElementById('forecast-pincode').value;
+            const days = document.getElementById('forecast-days').value;
+            document.getElementById('forecast-loading').style.display = 'block';
+            document.getElementById('forecast-chart').innerHTML = '';
+            try {
+                const params = new URLSearchParams({ days, ...(keyword && { keyword }), ...(pincode && { pincode }) });
+                const res = await fetch(`/api/forecast/?${params}`);
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+                displayForecast(data);
+                displayForecastInsights(data);
+                await loadProductsAtRisk();
+            } catch (e) {
+                document.getElementById('forecast-chart').innerHTML = `<div class="alert alert-warning">${e.message}</div>`;
+            } finally {
+                document.getElementById('forecast-loading').style.display = 'none';
+            }
+        }
+
+        function displayForecast(data) {
+            const hist = {
+                x: data.forecast_data.historical_dates,
+                y: data.forecast_data.historical_values.map(v => v * 100),
+                mode: 'lines+markers',
+                name: 'Historical',
+                line: { color: '#007bff' }
+            };
+            const pred = {
+                x: data.forecast_data.dates,
+                y: data.forecast_data.predicted.map(v => v * 100),
+                mode: 'lines',
+                name: 'Forecast',
+                line: { color: '#28a745', dash: 'dot' }
+            };
+            const ub = {
+                x: data.forecast_data.dates,
+                y: data.forecast_data.upper_bound.map(v => v * 100),
+                mode: 'lines',
+                showlegend: false,
+                line: { color: 'rgba(40,167,69,0.3)' }
+            };
+            const lb = {
+                x: data.forecast_data.dates,
+                y: data.forecast_data.lower_bound.map(v => v * 100),
+                mode: 'lines',
+                fill: 'tonexty',
+                showlegend: false,
+                line: { color: 'rgba(40,167,69,0.3)' }
+            };
+            Plotly.newPlot('forecast-chart', [lb, ub, hist, pred], {
+                title: 'Stock-Out Probability Forecast',
+                xaxis: { title: 'Date' },
+                yaxis: { title: 'Stock-Out Probability (%)' },
+                hovermode: 'x unified'
+            });
+        }
+
+        function displayForecastInsights(data) {
+            document.getElementById('forecast-insights').innerHTML = `
+                <div class="row text-center">
+                    <div class="col-md-4"><h5>${data.avg_outage_probability}%</h5><small>Avg. Outage Probability</small></div>
+                    <div class="col-md-4"><h5>${data.confidence_score}%</h5><small>Confidence Score</small></div>
+                    <div class="col-md-4"><h5>${data.data_points_used}</h5><small>Data Points Used</small></div>
+                </div>`;
+        }
+
+        // 2) Products at Risk
+        async function loadProductsAtRisk() {
+            const pincode = document.getElementById('forecast-pincode').value;
+            const days = document.getElementById('forecast-days').value;
+            document.getElementById('products-loading').style.display = 'block';
+            document.getElementById('products-at-risk-content').innerHTML = '';
+            try {
+                const params = new URLSearchParams({ days, ...(pincode && { pincode }) });
+                const res = await fetch(`/api/product-forecasts/?${params}`);
+                const products = await res.json();
+                renderProductsAtRisk(products, days);
+            } catch (e) {
+                document.getElementById('products-at-risk-content').innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+            } finally {
+                document.getElementById('products-loading').style.display = 'none';
+            }
+        }
+
+        function renderProductsAtRisk(products, days) {
+            if (!products.length) {
+                document.getElementById('products-at-risk-content').innerHTML = `
+                    <div class="alert alert-success">
+                        <h5><i class="fas fa-check-circle"></i> All Clear!</h5>
+                        <p>No products at risk in the next ${days} days.</p>
+                    </div>`;
+                return;
+            }
+            let html = `
+                <div class="alert alert-info mb-3">
+                    <strong>${products.length}</strong> product(s) at risk over next ${days} days.
+                </div>
+                <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Product Name</th>
+                            <th>Expected Date</th>
+                            <th>Risk Level</th>
+                            <th>Outage Probability</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+            products.forEach(item => {
+                const pcl = item.predicted_outage_probability >= 85 ? 'table-danger' :
+                            item.predicted_outage_probability >= 60 ? 'table-warning' : '';
+                const badge = item.predicted_outage_probability >= 85 ?
+                              '<span class="badge bg-danger">High Risk</span>' :
+                              item.predicted_outage_probability >= 60 ?
+                              '<span class="badge bg-warning text-dark">Medium Risk</span>' :
+                              '<span class="badge bg-info">Low Risk</span>';
+                const pcolor = item.predicted_outage_probability >= 85 ? 'bg-danger' :
+                               item.predicted_outage_probability >= 60 ? 'bg-warning' : 'bg-info';
+                html += `
+                    <tr class="${pcl}">
+                        <td><strong>${item.product_name}</strong></td>
+                        <td>${new Date(item.date).toLocaleDateString()}</td>
+                        <td>${badge}</td>
+                        <td>
+                            <div class="progress" style="height:20px">
+                                <div class="progress-bar ${pcolor}" role="progressbar"
+                                     style="width:${item.predicted_outage_probability}%"
+                                     aria-valuenow="${item.predicted_outage_probability}"
+                                     aria-valuemin="0" aria-valuemax="100">
+                                    ${item.predicted_outage_probability}%
+                                </div>
+                            </div>
+                        </td>
+                    </tr>`;
+            });
+            html += `</tbody></table></div>`;
+            document.getElementById('products-at-risk-content').innerHTML = html;
+        }
+
+        // 3) Correlation Analysis
+        async function loadCorrelationAnalysis() {
+            try {
+                const res = await fetch('/api/correlation/');
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+                // heatmap
+                const trace = {
+                    z: data.correlation_matrix.values,
+                    x: data.correlation_matrix.labels,
+                    y: data.correlation_matrix.labels,
+                    type: 'heatmap',
+                    colorscale: 'RdYlBu',
+                    showscale: true
+                };
+                Plotly.newPlot('correlation-chart', [trace], {
+                    title: 'Feature Correlation Matrix',
+                    xaxis: { title: 'Features' },
+                    yaxis: { title: 'Features' }
+                });
+                // time patterns
+                const h = data.time_patterns.hourly_availability;
+                Plotly.newPlot('hourly-pattern-chart', [{
+                    x: h.hours, y: h.availability, type: 'scatter', mode: 'lines+markers'
+                }], { title: 'Availability by Hour', xaxis: { title: 'Hour' }, yaxis: { title: 'Availability (%)' } });
+                const d = data.time_patterns.daily_availability;
+                Plotly.newPlot('daily-pattern-chart', [{
+                    x: d.days, y: d.availability, type: 'bar'
+                }], { title: 'Availability by Day', xaxis: { title: 'Day' }, yaxis: { title: 'Availability (%)' } });
+            } catch (e) {
+                document.getElementById('correlation-chart').innerHTML = `<div class="alert alert-warning">${e.message}</div>`;
+            }
+        }
+
+        // 4) Clustering
+        async function loadClusteringAnalysis() {
+            try {
+                const res = await fetch('/api/clustering/');
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+                let html = '<h6>Region Clusters:</h6>';
+                data.clusters.forEach(c => {
+                    const clr = c.avg_outage_rate > 30 ? 'danger' : c.avg_outage_rate > 15 ? 'warning' : 'success';
+                    html += `<div class="mb-2">
+                        <span class="badge bg-${clr}">${c.description}</span>
+                        <small class="ms-2">${c.pincodes.length} pincodes, ${c.avg_outage_rate}% outage rate</small>
+                    </div>`;
+                });
+                document.getElementById('clustering-results').innerHTML = html;
+            } catch (e) {
+                document.getElementById('clustering-results').innerHTML = `<div class="alert alert-warning">${e.message}</div>`;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCorrelationAnalysis();
+            loadClusteringAnalysis();
+            loadProductsAtRisk();
+        });
+    </script>
+</body>
+</html>
